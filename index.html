@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PanhaReach CV Builder</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Lora:wght@400;600;700&family=Noto+Sans+Khmer:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <style>
 :root{--ink:#1b2430;--paper:#fbfaf7;--line:#d6d2c8;--g:#0f766e}
@@ -50,8 +51,11 @@ select:disabled{background:#eee;color:#888}
 .ai small,#saveNote{display:block;margin-top:8px;color:#456}
 .sv{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .sv div{flex:1;min-width:0}.sv small{display:block;color:#666}
-#wrap{overflow:hidden;border-radius:6px;box-shadow:0 2px 14px #0003}
-#stage{width:794px;transform-origin:top left}
+#wrap{overflow:hidden}
+#stage{width:794px;transform-origin:top left;display:flex;flex-direction:column;gap:20px}
+#stage .paper{flex:none;box-shadow:0 2px 14px #0003}
+#meas{position:absolute;left:-10000px;top:0;width:794px}
+#pcount{font-size:13px;color:#555;margin:0 0 8px}
 .tabs{display:none}
 @media(max-width:900px){
  main{grid-template-columns:1fr;padding:12px 12px 84px}
@@ -62,9 +66,11 @@ select:disabled{background:#eee;color:#888}
  .tpls{grid-template-columns:repeat(2,1fr)}
 }
 /* CV paper */
-.paper{width:794px;min-height:1122px;background:#fff;color:#222;font:13px/1.55 Manrope,"Noto Sans Khmer",sans-serif;--t:#0001}
-.paper p{margin:3px 0}.paper ul{margin:4px 0 0;padding-left:18px}
-.paper .row{display:flex;justify-content:space-between;gap:12px}
+.paper{width:794px;height:1122px;position:relative;overflow:hidden;background:#fff;color:#222;font:13px/1.55 Manrope,"Noto Sans Khmer",sans-serif;--t:#0001}
+.paper p{margin:3px 0}.paper ul{margin:4px 0 0;padding-left:18px}.paper{overflow-wrap:anywhere;text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}.paper img{max-width:100%;height:auto}.paper .hd,.paper .row,.paper .ct{min-width:0}.paper .hd>div,.paper .main,.paper .bd{min-width:0}.paper .row span{max-width:45%;white-space:normal;overflow-wrap:anywhere}.paper .item{break-inside:avoid;page-break-inside:avoid}.paper h3{break-after:avoid;page-break-after:avoid}.paper li{overflow-wrap:anywhere}
+.paper .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.paper .row b{min-width:0}.paper .row span{flex:0 1 auto;max-width:45%;white-space:normal;overflow-wrap:anywhere;text-align:right}
+.paper li{margin:0 0 2px}.paper .sub{margin-top:1px}
 .paper .item{margin-bottom:12px;break-inside:avoid}.paper .sub{opacity:.7}
 .paper h1{margin:0;line-height:1.1}.paper img{object-fit:cover}
 .chips span{display:inline-block;background:var(--t);border-radius:6px;padding:2px 9px;margin:0 6px 6px 0}
@@ -124,6 +130,42 @@ select:disabled{background:#eee;color:#888}
 .t-bold h1{font-size:38px;font-weight:800;color:var(--a)}.t-bold .ttl{font-size:16px;margin:3px 0 8px;font-weight:600}
 .t-bold .bd{padding:6px 48px 40px}
 .t-bold h3{display:inline-block;background:var(--a);color:#fff;padding:3px 16px;border-radius:20px;font-size:13px;margin:20px 0 10px}
+.t-minimal{padding:48px 58px;font-family:Manrope,"Noto Sans Khmer",sans-serif}.t-minimal .hd{border-bottom:1px solid #d8dde4;padding-bottom:20px;margin-bottom:18px}.t-minimal h1{font-size:38px;font-weight:800;letter-spacing:-1.2px;color:var(--a)}.t-minimal .ttl{font-size:16px;margin:5px 0 8px;color:#586273}.t-minimal h3{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--a);margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid #d8dde4}.t-exec{font-family:Manrope,"Noto Sans Khmer",sans-serif;padding:0}.t-exec .hd{background:var(--a);color:#fff;padding:42px 52px;display:flex;align-items:center;justify-content:space-between;gap:24px}.t-exec h1{font-size:36px;font-weight:800}.t-exec .ttl{font-size:17px;margin:6px 0 10px;opacity:.9}.t-exec .hd img{width:112px;height:128px;border-radius:8px;border:3px solid #ffffffbb;flex:none}.t-exec .bd{padding:18px 52px 40px}.t-exec h3{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--a);margin:20px 0 8px;border-left:4px solid var(--a);padding-left:10px}
+
+/* Consistent, pagination-safe CV layout. */
+.t-pro{display:block}.t-pro aside{display:flex;align-items:center;gap:20px;padding:20px 38px;min-height:112px}.t-pro aside img{width:72px;height:72px;margin:0;flex:none}.t-pro aside h3{display:none}.t-pro aside p{margin:0;overflow-wrap:anywhere}.t-pro aside .pi,.t-pro aside .chips{display:none}.t-pro .main{padding:28px 42px}.t-cre .bd{display:block;padding:24px 44px 40px}.t-cre .side{display:contents}.t-cre .hd{border-bottom-right-radius:48px}.paper .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(105px,30%);align-items:start;gap:12px}.paper .row b{overflow-wrap:anywhere}.paper .row span{max-width:none;text-align:right;white-space:normal;overflow-wrap:anywhere}.paper .item{min-width:0}.paper .pi div{grid-template-columns:minmax(110px,34%) minmax(0,1fr)}.paper .row{grid-template-columns:minmax(0,1fr) minmax(118px,28%);gap:12px}.paper .row span{font-size:.94em;line-height:1.4}.paper h3{break-inside:avoid;margin-top:13px;margin-bottom:6px}.paper .item{margin-bottom:9px}.paper .item .row b{font-weight:700}.paper .item .sub{color:#505968;opacity:1}.paper .hd img{flex:0 0 auto}.t-pro aside{justify-content:flex-start;padding:12px 36px;min-height:78px}.t-pro aside img{width:54px;height:54px}.t-pro aside>div{display:flex;gap:18px;flex-wrap:wrap}.t-pro aside p{font-size:12px}.t-pro .main{padding:10px 36px 16px}.t-cre .bd{padding:10px 36px 18px}.t-bold .hd{padding:28px 38px}.t-bold .bd{padding:0 38px 24px}.t-cre .bd h3{border-bottom:1px solid var(--line);padding-bottom:5px}.t-cre .bd .item{border-left:0!important;padding-left:0!important}
+
+/* Polished additions: restrained color, clear hierarchy, ATS-safe single column. */
+.t-pro aside{background:var(--dark);box-shadow:inset 0 -1px #ffffff38}.t-pro aside img{border-radius:12px;border:2px solid #ffffffad}.t-pro .main h1{font-size:34px;letter-spacing:-.7px;color:#172435}.t-pro .ttl{margin:5px 0 14px}.t-pro .main h3{letter-spacing:.2px}.t-ats{padding:42px 56px;font-family:Arial,Manrope,"Noto Sans Khmer",sans-serif;color:#1f2937}.t-ats .hd{border-bottom:2px solid var(--a);padding-bottom:12px;margin-bottom:14px}.t-ats h1{font-size:34px;font-weight:700;color:#111}.t-ats .ttl{font-size:15px;margin:5px 0;color:#374151}.t-ats .ct{font-size:12px;color:#374151;overflow-wrap:anywhere}.t-ats h3{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:#111;border-bottom:1px solid #9ca3af;padding-bottom:3px;margin:16px 0 7px}.t-classic{padding:0 48px 34px;font-family:Lora,Georgia,serif;color:#242424}.t-classic .hd{background:var(--a);color:#fff;margin:0 -48px 18px;padding:30px 48px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center}.t-classic .hd h1{font-size:34px}.t-classic .hd .ttl{font-style:italic;margin-top:5px}.t-classic .hd img{width:84px;height:96px;border:2px solid #ffffffbb}.t-classic .ct{grid-column:1/-1;font:12px Manrope,"Noto Sans Khmer",sans-serif;overflow-wrap:anywhere}.t-classic h3{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--a);border-bottom:1px solid #b8b8b8;padding-bottom:4px;margin:17px 0 7px}.t-classic .bd>.item .row span{color:#424242}
+
+/* Additional designs: deliberately different typography, color, header, and section treatments. */
+.t-pro aside{background:var(--dark);box-shadow:inset 0 -1px #ffffff38;display:flex;align-items:center;gap:22px;padding:24px 38px;min-height:145px}.t-pro aside img{width:76px;height:76px;margin:0;border-radius:14px;border:2px solid #ffffffad}.t-pro .proinfo{min-width:0;flex:1}.t-pro .proinfo h1{font-size:34px;letter-spacing:-.7px;color:#fff}.t-pro .protitle{font-size:16px;color:#e5eef6;margin:4px 0 12px}.t-pro .procontact{display:flex;gap:8px 18px;flex-wrap:wrap;color:#fff;font-size:12px;overflow-wrap:anywhere}.t-pro .main{padding:18px 38px 24px}.t-pro .main h3{margin-top:14px}
+.t-sage{font-family:Manrope,"Noto Sans Khmer",sans-serif}.t-sage .hd{background:#e7f1ed;padding:30px 44px;display:flex;align-items:center;gap:22px;border-bottom:5px solid #285c4d}.t-sage .hd img{width:88px;height:88px;border-radius:50%}.t-sage h1{font-size:34px;color:#214f43}.t-sage .ttl{margin:5px 0;color:#45675d}.t-sage .ct{font-size:12px;color:#45675d}.t-sage .bd{padding:14px 44px 32px}.t-sage h3{color:#285c4d;border-bottom:1px solid #adc9bd;padding-bottom:4px}
+.t-rose{font-family:Lora,Georgia,serif;color:#382d2d}.t-rose .hd{background:#f7e8e5;padding:30px 46px;display:flex;align-items:center;gap:22px;border-left:10px solid #874b50}.t-rose .hd img{width:86px;height:98px;border-radius:8px}.t-rose h1{font-size:34px;color:#713e45}.t-rose .ttl{font-style:italic;margin:6px 0}.t-rose .ct{font:12px Manrope,sans-serif}.t-rose .bd{padding:12px 46px 30px}.t-rose h3{color:#874b50;border-bottom:1px solid #d9b9b4;padding-bottom:4px}
+.t-mono{padding:46px 56px;font-family:Arial,"Noto Sans Khmer",sans-serif;color:#202020}.t-mono .hd{border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:8px}.t-mono .hd img{width:72px;height:82px;float:right;filter:grayscale(1)}.t-mono h1{font-size:36px;letter-spacing:-1px}.t-mono .ttl,.t-mono .ct{color:#555;margin:5px 0;font-size:13px}.t-mono h3{color:#111;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #555;padding-bottom:3px}
+.t-tech{font-family:Manrope,"Noto Sans Khmer",sans-serif;background:#fbfdff}.t-tech .hd{background:#102a43;color:#fff;padding:32px 46px;display:flex;align-items:center;gap:22px;border-bottom:6px solid #0f766e}.t-tech .hd img{width:82px;height:82px;border-radius:10px}.t-tech h1{font-size:34px}.t-tech .ttl,.t-tech .ct{color:#d9e7f2;margin:5px 0;font-size:13px}.t-tech .bd{padding:14px 46px 32px}.t-tech h3{color:#0f766e;border-left:4px solid #0f766e;padding-left:10px}
+.t-academic{font-family:Lora,Georgia,serif;text-align:center;padding:38px 54px}.t-academic .hd{border-bottom:3px double #7b5a2e;padding-bottom:15px}.t-academic .hd img{width:68px;height:68px;border-radius:50%;display:block;margin:0 auto 8px}.t-academic h1{font-size:32px;color:#31281e}.t-academic .ttl{font-style:italic;margin:5px}.t-academic .ct{font:12px Manrope,sans-serif;color:#615440}.t-academic .bd{text-align:left;padding-top:10px}.t-academic h3{text-align:center;text-transform:uppercase;letter-spacing:1.4px;color:#7b5a2e;margin:18px 0 8px}
+.t-compact{padding:30px 42px;font:12px/1.35 Arial,"Noto Sans Khmer",sans-serif}.t-compact .hd{display:flex;align-items:center;gap:16px;border-bottom:2px solid #222;padding-bottom:9px}.t-compact .hd img{width:58px;height:64px;border-radius:4px}.t-compact h1{font-size:29px}.t-compact .ttl,.t-compact .ct{font-size:11px;color:#555;margin:3px 0}.t-compact .bd{padding-top:4px}.t-compact h3{font-size:12px;text-transform:uppercase;color:#222;border-bottom:1px solid #888;padding-bottom:2px;margin:11px 0 4px}.t-compact .item{margin-bottom:6px}
+.t-amber{font-family:Manrope,"Noto Sans Khmer",sans-serif}.t-amber .hd{background:#fff3dc;padding:30px 44px;display:flex;align-items:center;gap:22px;border-top:9px solid #9a5b00}.t-amber .hd img{width:80px;height:88px;border-radius:18px}.t-amber h1{font-size:34px;color:#754400}.t-amber .ttl{margin:5px 0;color:#79592c}.t-amber .ct{font-size:12px;color:#674d29}.t-amber .bd{padding:12px 44px 30px}.t-amber h3{color:#8b5200;background:#fff8eb;padding:5px 9px;border-radius:4px}
+.t-sky{font-family:Manrope,"Noto Sans Khmer",sans-serif}.t-sky .hd{border-top:8px solid #168aad;padding:28px 44px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px}.t-sky .hd img{width:76px;height:84px;border-radius:50%;grid-column:2;grid-row:1/3}.t-sky .identity{grid-column:1}.t-sky h1{font-size:34px;color:#164e63}.t-sky .ttl{margin:4px 0}.t-sky .ct{grid-column:1/-1;color:#526b73;font-size:12px;border-bottom:1px solid #c4e4ed;padding-bottom:12px}.t-sky .bd{padding:10px 44px 30px}.t-sky h3{color:#168aad;border-bottom:1px solid #b4dce7;padding-bottom:4px}
+.t-timeline{font-family:Manrope,"Noto Sans Khmer",sans-serif}.t-timeline .hd{background:#f2f0ff;padding:26px 42px;display:flex;align-items:center;gap:18px;border-left:8px solid #6153cc}.t-timeline .hd img{width:72px;height:78px;border-radius:50%}.t-timeline h1{font-size:32px;color:#352f6a}.t-timeline .ttl,.t-timeline .ct{font-size:12px;color:#5c5787;margin:4px 0}.t-timeline .bd{padding:10px 42px 28px}.t-timeline h3{color:#5143b0;border-left:3px solid #6153cc;padding-left:10px}.t-timeline .item{border-left:2px solid #dedaf7;padding-left:12px;margin-left:3px}
+
+/* Color picker drives a coherent tint/line/dark palette for every template. */
+.paper h3{color:var(--dark)}.paper .chips span{background:var(--t)}
+.t-pro aside{background:var(--dark)}
+.t-corp .hd,.t-exec .hd,.t-classic .hd,.t-tech .hd{background:var(--dark)}
+.t-corp h3,.t-stu h3,.t-cre h3,.t-formal h3,.t-elegant h3,.t-bold h3,.t-minimal h3,.t-exec h3,.t-ats h3,.t-classic h3{color:var(--dark);border-color:var(--line)}
+.t-corp .chips span{border-color:var(--a);color:var(--dark)}.t-formal .ct svg{fill:var(--dark)}.t-bold h1,.t-minimal h1{color:var(--dark)}
+.t-sage .hd{background:var(--t);border-bottom-color:var(--a)}.t-sage h1,.t-sage h3{color:var(--dark)}.t-sage h3{border-color:var(--line)}
+.t-rose .hd{background:var(--t);border-left-color:var(--a)}.t-rose h1,.t-rose h3{color:var(--dark)}.t-rose h3{border-color:var(--line)}
+.t-mono .hd{border-bottom-color:var(--a)}.t-mono h1,.t-mono h3{color:var(--dark)}.t-mono h3{border-color:var(--line)}
+.t-tech .hd{border-bottom-color:var(--a)}.t-tech h3{color:var(--dark);border-color:var(--a)}
+.t-academic .hd{border-color:var(--a)}.t-academic h1,.t-academic h3{color:var(--dark)}.t-academic h3{border-color:var(--line)}
+.t-compact h3{color:var(--dark);border-color:var(--line)}
+.t-amber .hd{background:var(--t);border-top-color:var(--a)}.t-amber h1,.t-amber h3{color:var(--dark)}.t-amber h3{background:var(--soft)}
+.t-sky .hd{border-top-color:var(--a)}.t-sky h1,.t-sky h3{color:var(--dark)}.t-sky .ct,.t-sky h3{border-color:var(--line)}
+.t-timeline .hd{background:var(--t);border-left-color:var(--a)}.t-timeline h1,.t-timeline h3{color:var(--dark)}.t-timeline .item{border-color:var(--line)}
+.t-sidebar{position:relative;background:#fff;font-family:Manrope,"Noto Sans Khmer",sans-serif;overflow:hidden}.t-sidebar .sidebar{position:absolute;z-index:1;top:120px;left:0;bottom:0;width:38%;box-sizing:border-box;background:var(--dark);color:#fff;padding:300px 32px 28px}.t-sidebar .sidebar h3{font-size:13px;text-transform:uppercase;letter-spacing:1.3px;color:#fff;border-bottom:1px solid #ffffff9c;padding-bottom:5px;margin:22px 0 9px}.t-sidebar .sidebar p{font-size:12px;line-height:1.45;margin:4px 0;overflow-wrap:anywhere}.t-sidebar .side-contact p{margin:7px 0}.t-sidebar .sidebar .item{margin:5px 0 12px}.t-sidebar .sidebar .row{display:block}.t-sidebar .sidebar .row span{display:block;text-align:left;white-space:normal;color:#fff;font-size:11px}.t-sidebar .sidebar .sub{color:#f3e8e1;font-size:11px}.t-sidebar .avatar{position:absolute;z-index:3;top:160px;left:calc(19% - 85px);width:170px;height:170px;border-radius:50%;box-sizing:border-box;background:#fff;border:5px solid #fff;overflow:hidden}.t-sidebar .avatar img{width:100%;height:100%;object-fit:cover}.t-sidebar .hero{position:absolute;z-index:2;top:195px;left:28%;right:0;height:164px;box-sizing:border-box;background:var(--t);display:flex;align-items:center;padding:22px 28px 22px 104px}.t-sidebar .hero h1{font-size:32px;line-height:1.1;color:var(--dark)}.t-sidebar .hero .ttl{font-size:14px;color:var(--dark);margin-top:6px}.t-sidebar .right{margin-left:38%;padding:386px 30px 24px 24px;box-sizing:border-box}.t-sidebar .main-flow h3{font-size:15px;color:var(--dark);border-bottom:1px solid var(--line);padding-bottom:6px;margin:18px 0 10px;text-transform:uppercase}.t-sidebar .main-flow>h3:first-child{text-transform:none}.t-sidebar .main-flow .item{margin-bottom:12px}.t-sidebar.continued{display:block}.t-sidebar.continued .right{margin:0;padding:28px 50px 30px}.t-sidebar.continued .main-flow{padding:0}.t-sidebar.continued .main-flow h3{margin-top:15px}
 </style>
 </head>
 <body class="v-edit">
@@ -131,8 +173,8 @@ select:disabled{background:#eee;color:#888}
   <h1>PanhaReach CV Builder Service</h1>
   <div class="btns">
     <button class="ghost sm" onclick="fillSample()">Reset sample</button>
-    <button class="sm" onclick="toPDF()">Download PDF</button>
-    <button class="sm" onclick="toWord()">Download Word</button>
+    <button class="sm" id="pdfBtn" onclick="toPDF()">Download PDF</button>
+    <button class="sm" onclick="toWord()" title="Editable Word file using the selected template style and color">Download Word</button>
   </div>
 </header>
 <main>
@@ -150,19 +192,20 @@ select:disabled{background:#eee;color:#888}
     <h2>3. Generate from a job position</h2>
     <div class="ai">
       <label>Position<input id="pos" list="poslist" placeholder="e.g. Network Engineer"></label>
-      <datalist id="poslist"><option>IT Support Officer<option>Network Engineer<option>Sales Representative<option>Accountant<option>HR Officer<option>Receptionist</datalist>
-      <button style="margin-top:10px" id="gen" onclick="gen()">Generate content</button><small id="aim"></small>
+      <datalist id="poslist"><option>IT Support Officer<option>Network Engineer<option>Restaurant Service Staff<option>Waiter / Waitress<option>Food Service Assistant<option>Restaurant Supervisor<option>Sales Representative<option>Cashier<option>Accountant<option>HR Officer<option>Receptionist</datalist>
+      <button style="margin-top:10px" id="gen" onclick="gen()">Generate content</button><small id="aim">Enter a job title to get a targeted profile, relevant skills, suggested responsibilities, and a cover letter. Review and keep only details that are true for you.</small>
       <div id="aiOut" hidden>
         <label>Profile summary<textarea id="aSum"></textarea></label><button class="ghost sm" onclick="useSum()">Use as my profile</button>
-        <label>Responsibilities (one per line)<textarea id="aRes"></textarea></label><button class="ghost sm" onclick="useRes()">Add to my latest job</button>
+        <label>Suggested responsibilities (keep only if they match your real work)<textarea id="aRes"></textarea></label><button class="ghost sm" onclick="useRes()">Add duties to matching or new job draft</button>
         <label>Skills (comma separated)<textarea id="aSk" style="min-height:60px"></textarea></label><button class="ghost sm" onclick="useSk()">Add to my skills</button>
         <label>Cover letter<textarea id="aLet" style="min-height:200px"></textarea></label><button class="ghost sm" onclick="letterDoc()">Download cover letter (.docx)</button>
       </div>
     </div>
     <div id="fLists"></div>
   </section>
-  <section id="prev" aria-label="Preview"><div id="wrap"><div id="stage"></div></div></section>
+  <section id="prev" aria-label="Preview"><div id="pcount" role="status"></div><div id="wrap"><div id="stage"></div></div></section>
 </main>
+<div id="meas" aria-hidden="true"></div>
 <nav class="tabs"><button id="tEdit" class="on" onclick="setView('edit')">Edit</button><button id="tView" onclick="setView('view')">Preview</button></nav>
 
 <script>
@@ -179,7 +222,7 @@ const CAT=Object.keys(SK),LVL=["Student / Intern","Entry level (0-2 years)","Mid
 const EDU=["Course","Associate Degree","Bachelor's Degree","Master's Degree","PhD"],LNAMES=["Khmer","English","French","Chinese","Korean","Japanese","Italian","Spanish"],PROF=["Beginner","Intermediate","Fluent","Proficient","Native"],MAR=["Single","Married","Divorced","Widowed"];
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],YR=[];for(let y=new Date().getFullYear()+8;y>=1970;y--)YR.push(y);
 const PAL={Navy:"#1e3a5f",Emerald:"#047857",Burgundy:"#7f1d1d",Black:"#1f2937",Purple:"#6d28d9"};
-const TN={pro:"Professional",corp:"Corporate",stu:"Student",cre:"Creative",formal:"Formal",elegant:"Elegant",bold:"Bold"};
+const TN={pro:"Professional",corp:"Corporate",stu:"Student",cre:"Creative",formal:"Formal",elegant:"Elegant",bold:"Bold",minimal:"Minimal",exec:"Executive",ats:"ATS Clean",classic:"Classic",sage:"Sage",rose:"Rose Editorial",mono:"Monochrome",tech:"Tech Grid",academic:"Academic",compact:"Compact ATS",amber:"Amber Modern",sky:"Skyline",timeline:"Timeline",sidebar:"Photo Sidebar"};
 const NAME={exp:"Experience",edu:"Education",proj:"Project",cert:"Certification",langs:"Language",ref:"Reference"};
 const REQ={exp:["role","Job title"],edu:["sch","School"],proj:["name","Project name"],cert:["name","Certificate"],langs:["n","Language"],ref:["name","Full name"]};
 const BLANKF={name:"",title:"",cat:"",level:"",email:"",phone:"",address:"",dob:"",pob:"",marital:"",summary:"",skills:""};
@@ -201,7 +244,7 @@ const sample=()=>({tpl:state?state.tpl:"corp",accent:state?state.accent:PAL.Navy
  proj:[{name:"Office inventory tracker",link:"",desc:"Built a web app to track equipment\nUsed by a team of 20"}],
  cert:[{name:"CCNA",org:"Cisco",yr:"2025"}],
  langs:[{n:"Khmer",l:"Native"},{n:"English",l:"Fluent"}],
- ref:[{name:"Mr. Chan Vuthy",job:"IT Manager",org:"Company name",phone:"+855 11 222 333",email:"vuthy@company.com"}]});
+ ref:[]});
 function norm(d){const r={tpl:"corp",accent:PAL.Navy,photo:"",...d,f:{...BLANKF,...(d.f||{})}};
  ["exp","edu","proj","cert","langs","ref"].forEach(k=>{r[k]=Array.isArray(d[k])?d[k]:[]});
  r.exp.forEach(e=>{if(e.desc&&!e.resp)e.resp=e.desc});if(!TN[r.tpl])r.tpl="corp";return r}
@@ -245,7 +288,24 @@ function renderTpls(){
  cre:'<path d="M0 0H160V30Q160 44 130 44H0Z" fill="#1e3a5f"/><rect x="104" y="56" width="44" height="50" rx="5" fill="#dde"/><rect x="12" y="58" width="80" height="5" fill="#bbb"/><rect x="12" y="72" width="70" height="5" fill="#bbb"/>',
  formal:'<rect x="12" y="14" width="80" height="10" fill="#222"/><rect x="12" y="30" width="90" height="2" fill="#222"/><rect x="118" y="12" width="30" height="36" fill="#ccc"/><rect x="12" y="62" width="136" height="5" fill="#bbb"/><rect x="12" y="74" width="110" height="5" fill="#bbb"/>',
  elegant:'<circle cx="80" cy="22" r="12" fill="#ccc"/><rect x="50" y="42" width="60" height="7" fill="#333"/><rect x="16" y="62" width="128" height="1.5" fill="#1e3a5f"/><rect x="16" y="76" width="120" height="5" fill="#bbb"/>',
- bold:'<rect width="160" height="38" fill="#cfe0ee"/><rect x="12" y="14" width="70" height="9" fill="#1e3a5f"/><rect x="12" y="52" width="40" height="9" rx="4" fill="#1e3a5f"/><rect x="12" y="72" width="130" height="5" fill="#bbb"/>'};
+ bold:'<rect width="160" height="38" fill="#cfe0ee"/><rect x="12" y="14" width="70" height="9" fill="#1e3a5f"/><rect x="12" y="52" width="40" height="9" rx="4" fill="#1e3a5f"/><rect x="12" y="72" width="130" height="5" fill="#bbb"/>' ,
+ sage:'<rect width="160" height="40" fill="#e7f1ed"/><rect x="12" y="13" width="72" height="9" fill="#285c4d"/><rect x="12" y="53" width="40" height="6" fill="#285c4d"/><rect x="12" y="68" width="130" height="5" fill="#bbb"/>',
+ rose:'<rect width="160" height="45" fill="#f7e8e5"/><rect x="12" y="13" width="82" height="9" fill="#874b50"/><rect x="12" y="58" width="54" height="6" fill="#874b50"/><rect x="12" y="73" width="130" height="5" fill="#bbb"/>',
+ mono:'<rect x="12" y="12" width="96" height="10" fill="#111"/><rect x="12" y="30" width="136" height="2" fill="#111"/><rect x="12" y="48" width="50" height="6" fill="#111"/><rect x="12" y="64" width="128" height="5" fill="#bbb"/>',
+ tech:'<rect width="160" height="42" fill="#102a43"/><rect x="12" y="14" width="78" height="8" fill="#fff"/><rect x="12" y="54" width="42" height="7" fill="#0f766e"/><rect x="12" y="70" width="130" height="5" fill="#bbb"/>',
+ academic:'<circle cx="80" cy="13" r="6" fill="#7b5a2e"/><rect x="40" y="28" width="80" height="8" fill="#333"/><rect x="15" y="49" width="130" height="2" fill="#7b5a2e"/><rect x="15" y="64" width="52" height="5" fill="#7b5a2e"/>',
+ compact:'<rect x="12" y="10" width="88" height="8" fill="#222"/><rect x="12" y="25" width="130" height="2" fill="#666"/><rect x="12" y="39" width="45" height="5" fill="#222"/><rect x="12" y="51" width="132" height="4" fill="#bbb"/>',
+ amber:'<rect width="160" height="42" fill="#fff3dc"/><rect x="12" y="13" width="82" height="9" fill="#9a5b00"/><rect x="12" y="54" width="48" height="6" fill="#9a5b00"/><rect x="12" y="69" width="128" height="5" fill="#bbb"/>',
+ sky:'<rect x="0" y="0" width="160" height="5" fill="#168aad"/><rect x="12" y="18" width="88" height="9" fill="#164e63"/><rect x="12" y="46" width="132" height="2" fill="#168aad"/><rect x="12" y="61" width="48" height="6" fill="#168aad"/>',
+ timeline:'<rect x="12" y="12" width="5" height="96" fill="#6153cc"/><circle cx="14.5" cy="22" r="5" fill="#6153cc"/><rect x="27" y="18" width="75" height="8" fill="#333"/><rect x="27" y="44" width="5" height="8" fill="#6153cc"/><rect x="39" y="46" width="104" height="5" fill="#bbb"/>'
+ ,
+ minimal:'<rect x="12" y="14" width="100" height="9" fill="#1e3a5f"/><rect x="12" y="34" width="136" height="1.5" fill="#bbb"/><rect x="12" y="49" width="48" height="6" fill="#1e3a5f"/><rect x="12" y="65" width="130" height="5" fill="#bbb"/>',
+ exec:'<rect width="160" height="38" fill="#1e3a5f"/><rect x="12" y="12" width="70" height="8" fill="#fff"/><rect x="12" y="52" width="5" height="12" fill="#1e3a5f"/><rect x="25" y="55" width="120" height="5" fill="#bbb"/>',
+ ats:'<rect x="14" y="12" width="94" height="9" fill="#222"/><rect x="14" y="28" width="132" height="2" fill="#bbb"/><rect x="14" y="44" width="45" height="6" fill="#222"/><rect x="14" y="58" width="130" height="5" fill="#bbb"/><rect x="14" y="72" width="125" height="5" fill="#bbb"/>',
+ classic:'<rect width="160" height="30" fill="#1e3a5f"/><rect x="12" y="40" width="72" height="8" fill="#333"/><rect x="12" y="58" width="136" height="2" fill="#1e3a5f"/><rect x="12" y="72" width="128" height="5" fill="#bbb"/>'
+,
+ sidebar:'<rect x="0" y="15" width="58" height="105" fill="#70513f"/><rect x="58" y="28" width="102" height="19" fill="#d2aa95"/><circle cx="29" cy="38" r="21" fill="#fff"/><rect x="68" y="61" width="82" height="4" fill="#555"/><rect x="8" y="73" width="40" height="4" fill="#fff"/><rect x="68" y="80" width="74" height="4" fill="#bbb"/'
+};
  $("#tpls").innerHTML=Object.keys(TN).map(k=>`<div class="tpl${state.tpl===k?" on":""}" role="button" tabindex="0" data-t="${k}"><svg viewBox="0 0 160 120" style="background:#fff;border-radius:4px">${th[k]}</svg>${TN[k]}</div>`).join("");
  document.querySelectorAll(".tpl").forEach(el=>{const p=()=>{state.tpl=el.dataset.t;renderTpls();render()};el.onclick=p;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();p()}}});
 }
@@ -255,6 +315,11 @@ function renderPal(){
  $("#accent").oninput=e=>{state.accent=e.target.value;document.querySelectorAll("#pal button").forEach(b=>b.classList.remove("on"));render()};
 }
 
+// Calculate solid theme colors so browser preview and html2canvas PDF export use identical, supported CSS.
+function mixHex(a,b,wa){
+ const rgb=x=>{x=String(x).replace("#","");if(x.length===3)x=x.split("").map(c=>c+c).join("");return [parseInt(x.slice(0,2),16),parseInt(x.slice(2,4),16),parseInt(x.slice(4,6),16)]};
+ const A=rgb(a),B=rgb(b);return "#"+A.map((v,i)=>Math.round(v*wa+B[i]*(1-wa)).toString(16).padStart(2,"0")).join("");
+}
 // CV preview
 const ICON={ph:'<svg viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11 11 0 003.5.56 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.2.2 2.4.56 3.5a1 1 0 01-.25 1z"/></svg>',ml:'<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 5h18a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1zm1 3v9h16V8l-8 5z"/></svg>',pin:'<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.500A2.500 2.500 0 1112 6.500a2.500 2.500 0 010 5z"/></svg>'};
 function cvHTML(s){
@@ -269,26 +334,71 @@ function cvHTML(s){
  const sk=list(f.skills),lg=s.langs.filter(l=>l.n),pr=piRows(f);
  const chips=sk.length?`<div class="chips">${sk.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:"";
  const cols=sk.length?`<ul class="cols">${sk.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
- const lgH=lg.map(l=>`<p>${esc(l.n)}${l.l?` (${esc(l.l)})`:""}</p>`).join("");
+ const lgH=lg.length?`<p>${lg.map(l=>esc(l.n)+(l.l?` (${esc(l.l)})`:"")).join(" · ")}</p>`:"";
  const piH=pr.length?`<div class="pi">${pr.map(([l,v])=>`<div><b>${l}</b><span>${esc(v)}</span></div>`).join("")}</div>`:"";
  const contact=[f.email,f.phone,f.address].filter(Boolean);
  const S=(t,h)=>h?`<h3>${t}</h3>${h}`:"";
- const T=tp==="formal"?{sum:"Objective",edu:"Educational Background",exp:"Work Experience"}:{};
+ const T=tp==="formal"?{sum:"Objective",edu:"Educational Background",exp:"Work Experience"}:tp==="sidebar"?{sum:"About Me",exp:"Work Experience"}:{};
  const M={sum:S(T.sum||"Profile",f.summary?`<p>${esc(f.summary)}</p>`:""),pi:S("Personal Information",piH),exp:S(T.exp||"Experience",B.exp),edu:S(T.edu||"Education",B.edu),proj:S("Projects",B.proj),cert:S("Certifications",B.cert),sk:S("Skills",tp==="formal"?cols:chips),lg:S("Languages",lgH),ref:S("References",B.ref?`<div class="refs">${B.ref}</div>`:"")};
  const main=o=>o.map(k=>M[k]).join("");
  const img=s.photo?`<img src="${s.photo}" alt="">`:"";
- const st=`style="--a:${a};--t:${a}1f"`,nm=esc(f.name),ti=esc(f.title),cl=(sep)=>contact.map(esc).join(sep);
- if(tp==="pro")return `<div class="paper t-pro" ${st}><aside>${img}<h3>Contact</h3>${contact.map(c=>`<p>${esc(c)}</p>`).join("")}${M.pi}${M.sk}${M.lg}</aside><div class="main"><h1>${nm}</h1><div class="ttl">${ti}</div>${main(["sum","exp","edu","proj","cert","ref"])}</div></div>`;
+ const dark=mixHex(a,"#111827",.38),tint=mixHex(a,"#ffffff",.12),soft=mixHex(a,"#ffffff",.07),line=mixHex(dark,"#ffffff",.23);
+ const st=`style="--a:${a};--dark:${dark};--t:${tint};--soft:${soft};--line:${line}"`,nm=esc(f.name),ti=esc(f.title),cl=(sep)=>contact.map(esc).join(sep);
+ if(tp==="pro")return `<div class="paper t-pro" ${st}><aside>${img}<div class="proinfo"><h1>${nm}</h1><div class="protitle">${ti}</div><div class="procontact">${contact.map(c=>`<span>${esc(c)}</span>`).join("")}</div></div></aside><div class="main">${main(["sum","exp","edu","proj","cert","pi","sk","lg","ref"])}</div></div>`;
  if(tp==="corp")return `<div class="paper t-corp" ${st}><div class="hd"><div><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  |  ")}</div></div>${img}</div><div class="bd">${main(["sum","pi","exp","edu","proj","cert","sk","lg","ref"])}</div></div>`;
  if(tp==="stu")return `<div class="paper t-stu" ${st}><div class="hd">${img}<div><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  /  ")}</div></div></div>${main(["sum","edu","proj","cert","exp","pi","sk","lg","ref"])}</div>`;
  if(tp==="formal")return `<div class="paper t-formal" ${st}><div class="hd"><div class="hl"><h1>${nm}</h1><div class="ct">${f.phone?ICON.ph+`<span>${esc(f.phone)}</span>`:""}${f.email?ICON.ml+`<span>${esc(f.email)}</span>`:""}${f.address?ICON.pin+`<span>${esc(f.address)}</span>`:""}</div></div>${img}</div><hr>${main(["sum","pi","edu","exp","proj","cert","sk","lg","ref"])}</div>`;
  if(tp==="elegant")return `<div class="paper t-elegant" ${st}><div class="hd">${img}<h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  •  ")}</div></div>${main(["sum","pi","exp","edu","proj","cert","sk","lg","ref"])}</div>`;
  if(tp==="bold")return `<div class="paper t-bold" ${st}><div class="hd">${img}<div><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  |  ")}</div></div></div><div class="bd">${main(["sum","pi","exp","edu","proj","cert","sk","lg","ref"])}</div></div>`;
- return `<div class="paper t-cre" ${st}><div class="hd">${img}<div><h1>${nm}</h1><div class="ttl">${ti}</div></div></div><div class="bd"><div>${main(["sum","exp","proj","ref"])}</div><div class="side"><h3>Contact</h3>${contact.map(c=>`<p style="word-break:break-word">${esc(c)}</p>`).join("")}${M.pi}${M.edu}${M.cert}${M.sk}${M.lg}</div></div></div>`;
+ if(tp==="minimal")return `<div class="paper t-minimal" ${st}><div class="hd"><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  •  ")}</div></div>${main(["sum","exp","edu","proj","cert","sk","lg","pi","ref"])}</div>`;
+ if(tp==="exec")return `<div class="paper t-exec" ${st}><div class="hd"><div><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  |  ")}</div></div>${img}</div><div class="bd">${main(["sum","exp","edu","proj","cert","sk","lg","pi","ref"])}</div></div>`;
+ if(tp==="ats")return `<div class="paper t-ats" ${st}><div class="hd"><h1>${nm}</h1><div class="ttl">${ti}</div><div class="ct">${cl("  |  ")}</div></div><div class="bd">${main(["sum","exp","edu","sk","proj","cert","lg","pi","ref"])}</div></div>`;
+ if(tp==="classic")return `<div class="paper t-classic" ${st}><div class="hd"><div><h1>${nm}</h1><div class="ttl">${ti}</div></div>${img}<div class="ct">${cl("  ·  ")}</div></div><div class="bd">${main(["sum","exp","edu","proj","cert","sk","lg","pi","ref"])}</div></div>`;
+ if(["sage","rose","mono","tech","academic","compact","amber","sky","timeline"].includes(tp))return `<div class="paper t-${tp}" ${st}><div class="hd">${img}<div class="identity"><h1>${nm}</h1><div class="ttl">${ti}</div><div class="ct">${cl("  ·  ")}</div></div></div><div class="bd">${main(["sum","exp","edu","proj","cert","sk","lg","pi","ref"])}</div></div>`;
+ if(tp==="sidebar")return `<div class="paper t-sidebar" ${st}><aside class="sidebar"><div class="side-contact"><h3>Contact</h3>${f.email?`<p>${esc(f.email)}</p>`:""}${f.phone?`<p>${esc(f.phone)}</p>`:""}${f.address?`<p>${esc(f.address)}</p>`:""}</div>${S("Education",B.edu)}${S("Skills",sk.map(x=>`<p>${esc(x)}</p>`).join(""))}${S("Languages",lg.map(x=>`<p>${esc(x.n)}${x.l?` (${esc(x.l)})`:""}</p>`).join(""))}</aside><div class="avatar">${img}</div><div class="hero"><div><h1>${nm}</h1><div class="ttl">${ti}</div></div></div><div class="right"><div class="main-flow">${main(["sum","exp","proj","cert","pi","ref"])}</div></div></div>`;
+ return `<div class="paper t-cre" ${st}><div class="hd">${img}<div><h1>${nm}</h1><div class="ttl">${ti}</div><div>${cl("  |  ")}</div></div></div><div class="bd">${main(["sum","exp","edu","proj","cert","pi","sk","lg","ref"])}</div></div>`;
 }
 let pt;function persist(){clearTimeout(pt);pt=setTimeout(()=>{try{localStorage.setItem("cvb.draft",JSON.stringify(state))}catch(e){}},300)}
-function render(){$("#stage").innerHTML=cvHTML(state);fit();persist()}
-function fit(){const w=$("#wrap").clientWidth;if(!w)return;const k=Math.min(1,w/794);$("#stage").style.transform=`scale(${k})`;$("#wrap").style.height=($("#stage").firstChild.offsetHeight*k)+"px"}
+// Split content into stable A4 pages after fonts are ready. A heading stays with its first item;
+// subsequent entries move as whole units and are never silently clipped at a page boundary.
+const PH=1122,PBOT=58;
+function paginate(s){
+ const tp=s.tpl,meas=$("#meas");meas.innerHTML="";
+ const tmp=document.createElement("div");tmp.innerHTML=cvHTML(s);const full=tmp.firstChild;
+ const flow=p=>p.querySelector(".main")||p.querySelector(".bd")||p.querySelector(".main-flow")||p;
+ const ks0=[...flow(full).children],i0=ks0.findIndex(k=>k.tagName==="H3"),secs=i0<0?[]:ks0.slice(i0),groups=[];let cur=null;
+ secs.forEach(k=>{if(k.tagName==="H3"){cur={h:k,p:[]};groups.push(cur)}else if(cur)cur.p.push(k)});
+ meas.appendChild(full);
+ const units=[];groups.forEach(g=>{
+  if(!g.p.length)return;
+  const last=g.p[g.p.length-1],height=last.getBoundingClientRect().bottom-g.h.getBoundingClientRect().top;
+  if(height<=240){units.push({nodes:[g.h,...g.p],heading:g.h,repeat:false});return}
+  units.push({nodes:[g.h,g.p[0]],heading:g.h,repeat:false});g.p.slice(1).forEach(x=>units.push({nodes:[x],heading:g.h,repeat:true}));
+ });
+ const mk=first=>{const p=full.cloneNode(true);p.style.cssText+=";height:"+PH+"px;overflow:hidden;position:relative";
+  const F=flow(p),ks=[...F.children],i=ks.findIndex(k=>k.tagName==="H3"),n=i<0?ks.length:i;
+  ks.slice(n).forEach(k=>k.remove());
+  if(!first){p.classList.add("continued");ks.slice(0,n).forEach(k=>k.remove());const hd=p.querySelector(".hd");if(hd)hd.remove();const hero=p.querySelector(".hero");if(hero)hero.remove();const avatar=p.querySelector(".avatar");if(avatar)avatar.remove();const sidebar=p.querySelector(".sidebar");if(sidebar)sidebar.remove();
+   if(tp==="pro")p.querySelector("aside").innerHTML="";
+   const side=p.querySelector(".side");if(side)side.remove();
+   if(p.querySelector(".bd"))p.querySelector(".bd").style.paddingTop="30px"}
+  meas.appendChild(p);return{p,F}};
+ let pg=mk(true),pages=[pg.p],placed=0;
+ units.forEach(u=>{
+  let nodes=u.nodes.map(n=>n.cloneNode(true));nodes.forEach(n=>pg.F.appendChild(n));
+  let bottom=Math.max(...nodes.map(n=>n.offsetTop+n.offsetHeight));
+  if(bottom>PH-PBOT&&placed>0){
+   nodes.forEach(n=>n.remove());pg=mk(false);pages.push(pg.p);placed=0;
+   nodes=u.nodes.map(n=>n.cloneNode(true));if(u.repeat)nodes.unshift(u.heading.cloneNode(true));
+   nodes.forEach(n=>pg.F.appendChild(n));bottom=Math.max(...nodes.map(n=>n.offsetTop+n.offsetHeight));
+  }
+  if(bottom>PH-PBOT){const n=nodes[nodes.length-1],available=Math.max(120,PH-PBOT-n.offsetTop);n.style.transformOrigin="top left";n.style.transform=`scaleY(${Math.min(1,available/n.offsetHeight)})`;n.style.marginBottom=`-${Math.max(0,n.offsetHeight-available)}px`}
+  placed++});
+ full.remove();return pages;
+}
+function render(){const pages=paginate(state),st=$("#stage");st.innerHTML="";pages.forEach(p=>st.appendChild(p));
+ $("#pcount").textContent=pages.length+(pages.length>1?" pages":" page")+" (A4)";fit();persist()}
+function fit(){const w=$("#wrap").clientWidth;if(!w)return;const k=Math.min(1,w/794);$("#stage").style.transform=`scale(${k})`;$("#wrap").style.height=($("#stage").offsetHeight*k)+"px"}
 addEventListener("resize",fit);
 function setView(v){document.body.className="v-"+v;$("#tEdit").classList.toggle("on",v==="edit");$("#tView").classList.toggle("on",v==="view");fit();scrollTo(0,0)}
 function refreshAll(){renderTop();renderLists();renderTpls();renderPal();renderSaves();$("#pimg").src=state.photo||BLANK;render()}
@@ -335,38 +445,90 @@ function validate(){
 
 // export
 const fname=()=>(state.f.name||"CV").replace(/\s+/g,"_");
-function toPDF(){
+async function toPDF(){
  if(!validate())return;
- const box=document.createElement("div");box.style.cssText="position:fixed;left:-10000px;top:0;width:794px";
- box.innerHTML=cvHTML(state);box.firstChild.style.minHeight="1120px";document.body.appendChild(box);
- html2pdf().set({margin:0,filename:fname()+"_CV.pdf",image:{type:"jpeg",quality:.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:"mm",format:"a4"},pagebreak:{mode:["css"],avoid:".item"}}).from(box.firstChild).save().then(()=>box.remove());
+ const btn=$("#pdfBtn"),lab0=btn.textContent;btn.disabled=true;btn.textContent="Creating PDF...";
+ try{
+  // Wait for web fonts before measuring/exporting; otherwise fallback-font metrics can clip or misalign text.
+  if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const pages=paginate(state),pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",compress:true});
+  for(let i=0;i<pages.length;i++){
+   const c=await html2canvas(pages[i],{scale:4,useCORS:true,backgroundColor:"#ffffff",width:794,height:PH,windowWidth:794,scrollX:0,scrollY:0,logging:false});
+   if(i)pdf.addPage();
+   // PNG avoids JPEG blur around small text, rules, and icons in the CV.
+   pdf.addImage(c.toDataURL("image/png"),"PNG",0,0,210,297,undefined,"FAST");
+   c.width=1;c.height=1;
+  }
+  pdf.save(fname()+"_CV.pdf");
+ }catch(e){console.error("PDF export failed",e);alert("Could not create the PDF. Please try again.")}
+ finally{$("#meas").innerHTML="";btn.disabled=false;btn.textContent=lab0}
 }
 function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click()}
 async function toWord(){
  if(!validate())return;
- const D=docx,s=state,f=s.f,col=s.accent.slice(1);
- const P=(t,o={})=>new D.Paragraph({spacing:{after:60},children:[new D.TextRun({text:t,size:o.size||21,bold:o.bold,italics:o.i,color:o.color,font:"Arial"})]});
- const H=t=>new D.Paragraph({spacing:{before:240,after:100},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:col,space:2}},children:[new D.TextRun({text:t,bold:true,size:24,color:col,font:"Arial"})]});
- const B=t=>new D.Paragraph({bullet:{level:0},spacing:{after:40},children:[new D.TextRun({text:t.replace(/^[-•]\s*/,""),size:21,font:"Arial"})]});
- const bl=d=>String(d||"").split("\n").filter(x=>x.trim()).map(B);
- const head=[P(f.name,{size:44,bold:true}),P(f.title,{size:26,color:col,bold:true}),P([f.email,f.phone,f.address].filter(Boolean).join("  |  "),{size:19})];
- let top=head;
- if(s.photo){const buf=await (await fetch(s.photo)).arrayBuffer();
-  const n={style:D.BorderStyle.NONE,size:0,color:"FFFFFF"},nb={top:n,bottom:n,left:n,right:n};
-  top=[new D.Table({width:{size:9700,type:D.WidthType.DXA},columnWidths:[7700,2000],borders:{...nb,insideHorizontal:n,insideVertical:n},rows:[new D.TableRow({children:[
-   new D.TableCell({borders:nb,width:{size:7700,type:D.WidthType.DXA},children:head}),
-   new D.TableCell({borders:nb,width:{size:2000,type:D.WidthType.DXA},children:[new D.Paragraph({alignment:D.AlignmentType.RIGHT,children:[new D.ImageRun({data:buf,type:"jpg",transformation:{width:95,height:95}})]})]})]})]})];}
- const k=[...top];
- if(f.summary)k.push(H("Profile"),P(f.summary));
- const pr=piRows(f);if(pr.length){k.push(H("Personal Information"));pr.forEach(([l,v])=>k.push(P(l+": "+v)))}
- const ex=s.exp.filter(e=>e.role||e.co);if(ex.length){k.push(H("Experience"));ex.forEach(e=>k.push(P(e.role||"",{bold:true,size:22}),P([e.co,range(e,"Present")].filter(Boolean).join("  |  "),{i:true,color:"555555"}),...bl(e.resp)))}
- const ed=s.edu.filter(e=>e.sch||e.deg||e.lvl);if(ed.length){k.push(H("Education"));ed.forEach(e=>k.push(P(e.lvl&&e.deg?e.lvl+" in "+e.deg:e.lvl||e.deg||"",{bold:true,size:22}),P([e.sch,range(e,"Present")].filter(Boolean).join("  |  "),{i:true,color:"555555"})))}
- const pj=s.proj.filter(p=>p.name);if(pj.length){k.push(H("Projects"));pj.forEach(p=>k.push(P(p.name,{bold:true,size:22}),...(p.link?[P(p.link,{i:true,color:"555555"})]:[]),...bl(p.desc)))}
- const ce=s.cert.filter(c=>c.name);if(ce.length){k.push(H("Certifications"));ce.forEach(c=>k.push(P(c.name+(c.org?", "+c.org:"")+(c.yr?" ("+c.yr+")":""))))}
- if(list(f.skills).length)k.push(H("Skills"),P(list(f.skills).join(", ")));
- const lg=s.langs.filter(l=>l.n);if(lg.length)k.push(H("Languages"),P(lg.map(l=>l.n+(l.l?" ("+l.l+")":"")).join(", ")));
- const rf=s.ref.filter(r=>r.name);if(rf.length){k.push(H("References"));rf.forEach(r=>k.push(P(r.name,{bold:true,size:22}),...[[r.job,r.org],[r.phone,r.email]].map(x=>x.filter(Boolean).join(", ")).filter(Boolean).map(t=>P(t))))}
- save(await D.Packer.toBlob(new D.Document({sections:[{properties:{page:{margin:{top:900,bottom:900,left:1100,right:1100}}},children:k}]})),fname()+"_CV.docx");
+ const btn=document.querySelector('button[onclick="toWord()"]'),old=btn?btn.textContent:"Download Word";
+ if(btn){btn.disabled=true;btn.textContent="Creating editable Word file..."}
+ try{
+  const D=docx,f=state.f,s=state,accent=state.accent.slice(1).toUpperCase(),dark=mixHex(state.accent,"#111827",.38).slice(1).toUpperCase(),tint=mixHex(state.accent,"#ffffff",.12).slice(1).toUpperCase(),fontBy={corp:"Georgia",formal:"Georgia",elegant:"Georgia",classic:"Georgia",academic:"Georgia",mono:"Arial",compact:"Arial",ats:"Arial",tech:"Arial",exec:"Arial",pro:"Arial",sidebar:"Arial",rose:"Georgia"},font=fontBy[s.tpl]||"Calibri";
+  const center=["elegant","academic"].includes(s.tpl),upper=["formal","ats","compact","mono","academic"].includes(s.tpl),band=["pro","corp","exec","classic","tech"].includes(s.tpl),softBand=["cre","bold","sage","rose","amber","sky","timeline"].includes(s.tpl),isSide=s.tpl==="sidebar",baseSize=s.tpl==="compact"?19:21;
+  const noBorder={style:D.BorderStyle.NONE,size:0,color:"FFFFFF"},noBorders={top:noBorder,bottom:noBorder,left:noBorder,right:noBorder,insideHorizontal:noBorder,insideVertical:noBorder};
+  const txt=(text,opts={})=>new D.Paragraph({alignment:opts.align||(center?D.AlignmentType.CENTER:D.AlignmentType.LEFT),spacing:{before:opts.before??0,after:opts.after??70},keepNext:!!opts.keepNext,...(opts.border?{border:opts.border}:{}),...(opts.indent?{indent:opts.indent}:{}),children:[new D.TextRun({text:String(text??""),font:opts.font||font,size:opts.size||baseSize,bold:!!opts.bold,italics:!!opts.italic,color:opts.color||"263238"})]});
+  const heading=(label)=>{
+   const title=upper?label.toUpperCase():label,edge={bottom:{style:D.BorderStyle.SINGLE,size:s.tpl==="academic"||s.tpl==="elegant"?10:5,color:accent,space:4}};
+   if(s.tpl==="timeline")edge.left={style:D.BorderStyle.SINGLE,size:18,color:accent,space:6};
+   return txt(title,{size:s.tpl==="compact"?21:23,bold:true,color:dark,before:s.tpl==="compact"?130:230,after:100,keepNext:true,border:edge,indent:s.tpl==="timeline"?{left:150}:undefined,align:center?D.AlignmentType.CENTER:D.AlignmentType.LEFT});
+  };
+  const pText=(text,opts={})=>text?txt(text,{size:opts.size||baseSize,bold:opts.bold,italic:opts.italic,color:opts.color,after:opts.after??65,align:opts.align}):null;
+  const bullet=(text)=>txt("•  "+text,{size:baseSize,after:45,indent:{left:190,hanging:140},align:D.AlignmentType.LEFT});
+  const section=(name,items)=>{const valid=(items||[]).filter(Boolean);return valid.length?[heading(name),...valid]:[]};
+  const infoRows=()=>piRows(f).map(([k,v])=>txt(`${k}: ${v}`,{size:baseSize,after:50,align:D.AlignmentType.LEFT}));
+  const listSkills=list(f.skills);
+  const languages=s.langs.filter(x=>x.n);
+  const photoRun=async()=>{if(!s.photo)return null;try{const data=new Uint8Array(await(await fetch(s.photo)).arrayBuffer());return new D.ImageRun({data,type:"jpg",transformation:{width:82,height:90}})}catch(e){return null}};
+  const mkHeader=async(inSidebar=false)=>{
+   const photo=await photoRun(),headingChildren=[txt(f.name||"Your Name",{size:s.tpl==="formal"||s.tpl==="academic"?40:42,bold:true,color:band?"FFFFFF":dark,after:55,align:center?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),pText(f.title,{size:24,bold:true,color:band?"FFFFFF":dark,after:65,align:center?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),pText([f.email,f.phone,f.address].filter(Boolean).join("  |  "),{size:17,color:band?"FFFFFF":dark,after:10,align:center?D.AlignmentType.CENTER:D.AlignmentType.LEFT})].filter(Boolean);
+   const bg=band?dark:(softBand?tint:null),fill=bg?{fill:bg,type:D.ShadingType.CLEAR}:undefined;
+   const cell=(children,width)=>new D.TableCell({width:{size:width,type:D.WidthType.DXA},borders:noBorders,...(fill?{shading:fill}:{}),margins:{top:180,bottom:160,left:260,right:260},children});
+   let cells;
+   if(photo)cells=[cell(headingChildren,7800),cell([new D.Paragraph({alignment:D.AlignmentType.RIGHT,spacing:{before:0,after:0},children:[photo]})],2200)];
+   else cells=[cell(headingChildren,10000)];
+   return new D.Table({width:{size:10000,type:D.WidthType.DXA},columnWidths:cells.length===2?[7800,2200]:[10000],rows:[new D.TableRow({children:cells})],borders:noBorders,alignment:D.AlignmentType.CENTER});
+  };
+  const sectionsData={
+   sum:()=>section(s.tpl==="formal"?"Objective":s.tpl==="sidebar"?"About Me":"Profile",f.summary?[pText(f.summary)]:[]),
+   pi:()=>section("Personal Information",infoRows()),
+   exp:()=>section(s.tpl==="sidebar"?"Work Experience":s.tpl==="formal"?"Work Experience":"Experience",s.exp.filter(e=>e.role||e.co).flatMap(e=>[txt(e.role||"",{size:22,bold:true,after:25,align:D.AlignmentType.LEFT}),pText([e.co,range(e,"Present")].filter(Boolean).join("  |  "),{size:18,italic:true,color:"555555",after:55}),...String(e.resp||"").split("\n").filter(Boolean).map(bullet)])),
+   edu:()=>section(s.tpl==="formal"?"Educational Background":"Education",s.edu.filter(e=>e.sch||e.deg||e.lvl).flatMap(e=>[txt(e.lvl&&e.deg?e.lvl+" in "+e.deg:e.lvl||e.deg||"",{size:22,bold:true,after:25,align:D.AlignmentType.LEFT}),pText([e.sch,range(e,"Present")].filter(Boolean).join("  |  "),{size:18,color:"555555",after:60})])),
+   proj:()=>section("Projects",s.proj.filter(x=>x.name).flatMap(x=>[txt(x.name,{size:22,bold:true,after:35,align:D.AlignmentType.LEFT}),pText(x.link,{size:18,italic:true,color:dark}),...String(x.desc||"").split("\n").filter(Boolean).map(bullet)])),
+   cert:()=>section("Certifications",s.cert.filter(x=>x.name).map(x=>txt(`${x.name}${x.org?"  |  "+x.org:""}${x.yr?"     "+x.yr:""}`,{size:21,after:65,align:D.AlignmentType.LEFT}))),
+   sk:()=>section("Skills",listSkills.map(x=>bullet(x))),
+   lg:()=>section("Languages",languages.map(x=>txt(`${x.n}${x.l?" ("+x.l+")":""}`,{size:20,after:45,align:D.AlignmentType.LEFT}))),
+   ref:()=>section("References",s.ref.filter(x=>x.name).flatMap(x=>[txt(x.name,{size:21,bold:true,after:30,align:D.AlignmentType.LEFT}),pText([x.job,x.org].filter(Boolean).join(", "),{size:19}),pText([x.phone,x.email].filter(Boolean).join("  |  "),{size:18,after:65})]))
+  };
+  const orders={pro:["sum","exp","edu","proj","cert","pi","sk","lg","ref"],corp:["sum","pi","exp","edu","proj","cert","sk","lg","ref"],stu:["sum","edu","proj","cert","exp","pi","sk","lg","ref"],cre:["sum","exp","edu","proj","cert","pi","sk","lg","ref"],formal:["sum","pi","edu","exp","proj","cert","sk","lg","ref"],elegant:["sum","pi","exp","edu","proj","cert","sk","lg","ref"],bold:["sum","pi","exp","edu","proj","cert","sk","lg","ref"],minimal:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],exec:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],ats:["sum","exp","edu","sk","proj","cert","lg","pi","ref"],classic:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],sage:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],rose:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],mono:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],tech:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],academic:["sum","edu","exp","proj","cert","sk","lg","pi","ref"],compact:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],amber:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],sky:["sum","exp","edu","proj","cert","sk","lg","pi","ref"],timeline:["sum","exp","edu","proj","cert","sk","lg","pi","ref"]};
+  const content=[];
+  if(isSide){
+   const side=[],photo=await photoRun();if(photo)side.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,spacing:{after:120},children:[photo]}));
+   const sideHead=(label)=>txt(upper?label.toUpperCase():label,{size:22,bold:true,color:"FFFFFF",before:210,after:90,keepNext:true,align:D.AlignmentType.LEFT,border:{bottom:{style:D.BorderStyle.SINGLE,size:5,color:"FFFFFF",space:4}}}),sideSection=(label,items)=>{const valid=(items||[]).filter(Boolean);return valid.length?[sideHead(label),...valid]:[]};
+   side.push(sideHead("Contact"),...[ ["Email",f.email],["Phone",f.phone],["Location",f.address] ].filter(x=>x[1]).map(([k,v])=>txt(`${k}: ${v}`,{size:18,color:"FFFFFF",after:65,align:D.AlignmentType.LEFT})));
+   const ed=s.edu.filter(x=>x.sch||x.deg||x.lvl).flatMap(x=>[txt(x.lvl&&x.deg?x.lvl+" in "+x.deg:x.lvl||x.deg||"",{size:19,bold:true,color:"FFFFFF",after:25,align:D.AlignmentType.LEFT}),pText([range(x,"Present"),x.sch].filter(Boolean).join("  |  "),{size:17,color:"F4EAE4",after:55})]);
+   side.push(...sideSection("Education",ed),...sideSection("Skills",listSkills.map(x=>txt(x,{size:19,color:"FFFFFF",after:45,align:D.AlignmentType.LEFT}))),...sideSection("Languages",languages.map(x=>txt(`${x.n}${x.l?" ("+x.l+")":""}`,{size:18,color:"FFFFFF",after:45,align:D.AlignmentType.LEFT}))));
+   const right=[txt(f.name||"Your Name",{size:36,bold:true,color:dark,after:45,align:D.AlignmentType.LEFT,border:{bottom:{style:D.BorderStyle.SINGLE,size:10,color:accent,space:5}}}),pText(f.title,{size:22,bold:true,color:dark,after:45,align:D.AlignmentType.LEFT}),pText([f.email,f.phone,f.address].filter(Boolean).join("  |  "),{size:16,color:"555555",after:150,align:D.AlignmentType.LEFT}),...sectionsData.sum(),...sectionsData.exp(),...sectionsData.proj(),...sectionsData.cert(),...sectionsData.pi(),...sectionsData.ref()];
+   side.push(new D.Paragraph({spacing:{before:0,after:8300},children:[new D.TextRun({text:" ",font:"Arial",size:2})]}));
+   const leftCell=new D.TableCell({width:{size:3800,type:D.WidthType.DXA},shading:{fill:dark,type:D.ShadingType.CLEAR},borders:noBorders,margins:{top:160,bottom:160,left:220,right:220},children:side});
+   const rightCell=new D.TableCell({width:{size:6200,type:D.WidthType.DXA},borders:noBorders,margins:{top:100,bottom:150,left:240,right:100},children:right});
+   content.push(new D.Table({width:{size:10000,type:D.WidthType.DXA},columnWidths:[3800,6200],rows:[new D.TableRow({children:[leftCell,rightCell]})],borders:noBorders,alignment:D.AlignmentType.CENTER}));
+  }else{
+   content.push(await mkHeader(false));
+   const order=orders[s.tpl]||orders.corp;
+   for(const key of order)content.push(...sectionsData[key]());
+  }
+  const props={page:{size:{width:11906,height:16838},margin:{top:620,bottom:620,left:850,right:850,header:0,footer:0}}};
+  const doc=new D.Document({sections:[{properties:props,children:content}]});
+  save(await D.Packer.toBlob(doc),fname()+"_CV.docx");
+ }catch(e){console.error("Editable Word export failed",e);alert("Could not create the editable Word file. Please try again.")}
+ finally{if(btn){btn.disabled=false;btn.textContent=old}}
 }
 async function letterDoc(){
  const D=docx,t=$("#aLet").value.trim();if(!t)return;
@@ -374,12 +536,21 @@ async function letterDoc(){
 }
 
 // generate content from a position
+const ROLE_PROFILES=[
+ {match:/restaurant|waiter|waitress|server|food service|food & beverage|\bf&b\b|dining|barista|cafe|café|kitchen assistant/i,skills:["Customer service","Time management","Communication","Teamwork","Order taking","POS and cash handling","Food safety and hygiene","Multitasking","Attention to detail","Problem solving"],summary:p=>`Customer-focused applicant for a ${p} role, bringing a welcoming service approach, clear communication, teamwork, and attentive time management. Ready to support a smooth, hygienic, and positive dining experience.`,responsibilities:["Welcome guests, explain menu options, and record orders accurately","Coordinate with kitchen and service teammates to deliver orders promptly","Maintain clean dining and service areas following food-safety procedures","Respond politely to guest requests and help resolve service concerns","Handle bills or POS transactions accurately when assigned"]},
+ {match:/cashier|retail|store associate|shop assistant|sales assistant/i,skills:["Customer service","POS operation","Cash handling","Product knowledge","Communication","Teamwork","Accuracy","Time management","Stock replenishment","Problem solving"],summary:p=>`Customer-oriented applicant for a ${p} role, focused on helpful service, accurate transactions, clear communication, and reliable teamwork.`,responsibilities:["Assist customers with product questions and purchases","Process transactions and handle cash or card payments accurately","Keep displays tidy and replenish stock as assigned","Follow store procedures and report discrepancies promptly"]},
+ {match:/customer service|call center|call centre|client support|help desk|receptionist/i,skills:["Customer support","Active listening","Clear communication","Issue resolution","Empathy","CRM and ticketing","Time management","Documentation","Teamwork","Professional phone etiquette"],summary:p=>`Service-minded applicant for a ${p} position, prepared to listen carefully, communicate clearly, and guide customers toward timely solutions.`,responsibilities:["Respond to customer inquiries through the assigned channels","Clarify needs, record key details, and follow issues through to resolution","Escalate complex cases using the correct procedures","Maintain accurate service notes and a professional tone"]},
+ {match:/network|it support|technical support|system administrator|helpdesk|software|developer|programmer/i,skills:["Technical troubleshooting","Networking fundamentals","Operating systems","Documentation","Ticket management","Customer communication","Security awareness","Problem solving","Team collaboration"],summary:p=>`Technically minded applicant for a ${p} role, with a structured approach to troubleshooting, documentation, user support, and continuous learning.`,responsibilities:["Diagnose reported technical issues and document troubleshooting steps","Support users with approved hardware, software, or network procedures","Track incidents and escalate unresolved issues to the right team","Follow security and data-handling policies"]},
+ {match:/accountant|accounting|bookkeeper|finance|payroll/i,skills:["Bookkeeping","Financial records","Reconciliation","Microsoft Excel","Attention to detail","Confidentiality","Reporting","Time management","Communication"],summary:p=>`Detail-focused applicant for a ${p} role, emphasizing accurate record handling, confidentiality, organized reporting, and dependable follow-through.`,responsibilities:["Maintain and organize financial records using approved procedures","Assist with reconciliations, invoices, and supporting documentation","Check entries for accuracy and flag discrepancies","Protect confidential financial information"]},
+ {match:/human resources|\bhr officer\b|recruit|talent|people operations/i,skills:["Recruitment coordination","Interview scheduling","Employee records","HR systems","Confidentiality","Communication","Organization","Attention to detail","Team support"],summary:p=>`People-focused applicant for a ${p} role, ready to support organized hiring and employee processes with discretion, accuracy, and clear communication.`,responsibilities:["Coordinate interview schedules and candidate communications","Maintain employee and recruitment records confidentially","Support onboarding and routine HR administration","Respond to staff questions or route them to the appropriate contact"]},
+ {match:/teacher|education|tutor|teaching|instructor/i,skills:["Lesson preparation","Clear communication","Classroom support","Patience","Organization","Student engagement","Assessment","Teamwork","Adaptability"],summary:p=>`Learner-focused applicant for a ${p} role, committed to clear communication, thoughtful preparation, and a supportive learning environment.`,responsibilities:["Prepare learning activities aligned with agreed lesson objectives","Explain instructions clearly and encourage student participation","Monitor progress and share relevant observations with the team","Maintain an organized, respectful learning environment"]},
+ {match:/driver|delivery|courier|logistics|transport/i,skills:["Route planning","Safe driving","Time management","Customer communication","Navigation","Vehicle checks","Reliability","Record keeping","Problem solving"],summary:p=>`Reliable applicant for a ${p} role, focused on safe, punctual service, clear communication, and careful handling of assigned deliveries or transport duties.`,responsibilities:["Follow assigned routes and delivery instructions safely","Complete vehicle or equipment checks as required","Keep delivery records and communicate delays promptly","Treat customers and goods professionally"]}
+];
 function localGen(p,cat){
- const sk=SK[cat]||SK.Other,n=state.f.name||"[Your name]";
- return {summary:`${p} with strong skills in ${sk[0].toLowerCase()}, ${sk[1].toLowerCase()} and ${sk[2].toLowerCase()}. Reliable, detail-oriented and committed to clear communication, teamwork and continuous learning.`,
-  responsibilities:[`Carry out daily ${p} duties accurately and on schedule`,"Work with colleagues and stakeholders to resolve issues quickly","Keep clear records and documentation up to date","Support team goals and report progress to management"],
-  skills:sk,
-  coverLetter:`Dear Hiring Manager,\n\nI am excited to apply for the ${p} position. With strengths in ${sk[0].toLowerCase()}, ${sk[1].toLowerCase()} and ${sk[2].toLowerCase()}, I am confident I can contribute to your team from day one.\n\nI am skilled at working with colleagues to resolve issues quickly and at keeping accurate documentation. I take pride in reliability and clear communication.\n\nThank you for considering my application. I would welcome the chance to discuss how I can help your team.\n\nSincerely,\n${n}`};
+ const n=state.f.name||"[Your name]",profile=ROLE_PROFILES.find(x=>x.match.test(p)),sk=profile?profile.skills:(SK[cat]||SK.Other),tone=sk.slice(0,3).join(", ");
+ const summary=profile?profile.summary(p):`Draft profile for a ${p} role. Highlight your real strengths in ${tone.toLowerCase()}, communication, and teamwork; add a specific achievement that you can verify.`;
+ const responsibilities=profile?profile.responsibilities:[`Support the day-to-day requirements of the ${p} role using the procedures provided`,`Communicate clearly with colleagues, customers, or stakeholders as appropriate`,`Keep accurate records and complete assigned tasks on schedule`,`Ask for guidance and escalate issues when needed`];
+ return {summary,responsibilities,skills:sk,coverLetter:`Dear Hiring Manager,\n\nI am applying for the ${p} position. My relevant strengths include ${tone.toLowerCase()} and a commitment to reliable, professional work.\n\nI would welcome the opportunity to discuss how my verified experience and skills match your team's needs.\n\nThank you for your consideration.\n\nSincerely,\n${n}`};
 }
 async function gen(){
  const p=$("#pos").value.trim()||state.f.title;
@@ -388,16 +559,22 @@ async function gen(){
  let r;
  try{
   if(AI_ENDPOINT){const x=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({position:p,category:state.f.cat,level:state.f.level,name:state.f.name})});r=await x.json();$("#aim").textContent="AI draft. Review and edit before using."}
-  else{r=localGen(p,state.f.cat);$("#aim").textContent="Basic draft (no AI connected). Set AI_ENDPOINT for position-specific content. Edit before using."}
+  else{r=localGen(p,state.f.cat);$("#aim").textContent="Role-matched draft generated from the built-in position guide. Review and personalize it; no external AI is connected."}
  }catch(e){r=localGen(p,state.f.cat);$("#aim").textContent="AI service unreachable. Showing a basic draft."}
  $("#aSum").value=r.summary||"";$("#aRes").value=(r.responsibilities||[]).join("\n");$("#aSk").value=(r.skills||[]).join(", ");$("#aLet").value=r.coverLetter||"";
  $("#aiOut").hidden=false;b.disabled=false;b.textContent="Generate again";
 }
 function useSum(){state.f.summary=$("#aSum").value;renderTop();render()}
-function useRes(){if(!state.exp.length)state.exp.push({role:$("#pos").value});const e=state.exp[state.exp.length-1];e.resp=(e.resp?e.resp+"\n":"")+$("#aRes").value;renderLists();render()}
+function useRes(){
+ const title=($("#pos").value.trim()||state.f.title||"New role").trim(),key=title.toLowerCase();
+ let e=[...state.exp].reverse().find(x=>(x.role||"").trim().toLowerCase()===key);
+ if(!e){if(!confirm(`No existing job is titled “${title}”. Create a new draft job entry with this title and the suggested duties? You can add employer and dates afterward.`))return;e={role:title,co:"",resp:""};state.exp.push(e)}
+ e.resp=(e.resp?e.resp+"\n":"")+$("#aRes").value.trim();renderLists();render();
+}
 function useSk(){const m=[...new Set([...list(state.f.skills),...list($("#aSk").value)])];state.f.skills=m.join(", ");renderTop();render()}
 
 refreshAll();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
 </script>
 </body>
 </html>
